@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="uk">
+<meta charset="utf-8">
+<title>Газетний кіоск — моделювання</title>
+<style>
+  body { font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 24px; max-width: 900px; margin: auto; }
+  table { border-collapse: collapse; margin: 12px 0; }
+  td, th { border: 1px solid #ccc; padding: 6px 10px; text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  .ok { background: #e8fff0; }
+</style>
+<h1>Газетний кіоск</h1>
+<div id="out"></div>
+
+<script>
+const sellPrice = 0.75, buyCost = 0.40, lostSale = 0.50;
+const demands = [0,1,2,3], probs = [0.1,0.3,0.4,0.2], orders = [0,1,2,3];
+const payoff = (q,d) => +(sellPrice*Math.min(q,d) - buyCost*q - lostSale*Math.max(d-q,0)).toFixed(2);
+function expected(q){ return +demands.reduce((s,d,i)=> s + payoff(q,d)*probs[i], 0).toFixed(3); }
+function render(){
+  const out = document.getElementById('out');
+  let html = '<h2>Таблиця виплат π(q,d)</h2><table><tr><th>q \\ d</th>';
+  demands.forEach(d=> html += `<th>${d}</th>`);
+  html += '</tr>';
+  const exp = [];
+  orders.forEach(q=>{
+    html += `<tr><td>${q}</td>`;
+    demands.forEach(d=> html += `<td>${payoff(q,d)}</td>`);
+    html += '</tr>';
+    exp.push({q, val: expected(q)});
+  });
+  html += '</table>';
+  const best = exp.reduce((a,b)=> b.val>a.val?b:a);
+  html += '<h2>Очікуваний прибуток E[π|q]</h2><table><tr><th>q</th><th>E[π]</th></tr>';
+  exp.forEach(r=>{
+    const cls = r.q===best.q ? ' class="ok"' : '';
+    html += `<tr${cls}><td>${r.q}</td><td>${r.val}</td></tr>`;
+  });
+  html += '</table>';
+  html += `<p><strong>Оптимальне рішення:</strong> замовляти <strong>q* = ${best.q}</strong> газет (макс. E[π] = <strong>${best.val}</strong>).</p>`;
+  out.innerHTML = html;
+}
+render();
+</script>
