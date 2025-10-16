@@ -1,273 +1,591 @@
 <!DOCTYPE html>
 <html lang="uk">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Корисність та моделювання ставки</title>
-  <style>
-    :root{
-      --bg:#0b0f14; --card:#121821; --muted:#6b7a90; --text:#e9eef7; --accent:#6ee7ff; --good:#2ecc71; --bad:#ff5c7a; --warn:#f1c40f;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(120deg,#0b0f14 0%,#0f1722 60%,#0b0f14 100%);color:var(--text)}
-    header{padding:20px 24px;border-bottom:1px solid #1f2a37;position:sticky;top:0;background:rgba(11,15,20,0.8);backdrop-filter:blur(6px)}
-    header h1{margin:0;font-size:20px;letter-spacing:.2px}
-    main{max-width:1100px;margin:24px auto;padding:0 16px;display:grid;grid-template-columns:360px 1fr;gap:16px}
-    .card{background:var(--card);border:1px solid #1f2a37;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    .card h2{margin:0;padding:14px 16px;border-bottom:1px solid #1f2a37;font-size:16px;color:#bcd1f1}
-    .pad{padding:14px 16px}
-    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
-    input[type="number"], input[type="text"], select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #263244;background:#0d1320;color:var(--text);outline:none}
-    input[type="number"]:focus, input[type="text"]:focus{border-color:#2e3f66;box-shadow:0 0 0 3px rgba(110,231,255,.15)}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-    .btn{cursor:pointer;border:none;padding:10px 12px;border-radius:12px;background:#1a2433;color:#d9e6ff}
-    .btn:hover{background:#22304a}
-    .btn.accent{background:linear-gradient(135deg,#1f9ee5,#6ee7ff);color:#001521;font-weight:700}
-    .btn.ghost{background:transparent;border:1px dashed #2b3a55;color:#9fb6d8}
-    table{width:100%;border-collapse:collapse}
-    th,td{border-bottom:1px solid #1f2a37;padding:8px 6px;text-align:right}
-    th{font-size:12px;color:#9fb6d8;font-weight:600}
-    td input{width:100%;padding:6px 8px;border-radius:10px;border:1px solid #263244;background:#0d1320;color:var(--text)}
-    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;padding:8px 10px;border-radius:999px;border:1px solid #2a3852;color:#bcd1f1;background:#0f1524}
-    .pill.good{border-color:#1f5a3b;background:#0f1d16;color:#b5f5cc}
-    .pill.bad{border-color:#57243a;background:#1a0f14;color:#ffd0db}
-    .pill.warn{border-color:#5a4a1f;background:#1a1610;color:#ffe6a3}
-    .result{font-size:15px;line-height:1.5}
-    .result strong{font-size:16px}
-    #chart{width:100%;height:360px;border-bottom-left-radius:18px;border-bottom-right-radius:18px;display:block;background:radial-gradient(1000px 400px at 80% -20%,rgba(110,231,255,.07),transparent)}
-    .grid line{stroke:#1f2a37;stroke-width:1}
-    .axis text{fill:#9fb6d8;font-size:11px}
-    .legend{display:flex;gap:10px;align-items:center;margin-top:8px}
-    .legend span{font-size:12px;color:#9fb6d8}
-    .badge{display:inline-block;width:10px;height:10px;border-radius:50%}
-    .b1{background:#6ee7ff}
-    .b2{background:#a3e635}
-    footer{max-width:1100px;margin:12px auto;padding:0 16px 30px;color:#96a8c6;font-size:12px}
-  </style>
-</head>
-<body>
-  <header>
-    <h1>Kорисність — моделювання ставок і ставлення до ризику</h1>
-  </header>
-  <main>
-    <section class="card" aria-label="Налаштування">
-      <h2>Параметри гри та таблиця корисності</h2>
-      <div class="pad">
-        <div class="row">
-          <div>
-            <label>Початковий капітал, w</label>
-            <input id="w" type="number" step="100" value="1000" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Корисність і критерії з конспекту — з графіком</title>
+    <style>
+      :root {
+        --bg: #0b0f14;
+        --card: #121821;
+        --muted: #6b7a90;
+        --text: #e9eef7;
+        --accent: #6ee7ff;
+        --good: #2ecc71;
+        --bad: #ff5c7a;
+        --warn: #f1c40f;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      header {
+        padding: 18px 20px;
+        border-bottom: 1px solid #1f2a37;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 18px;
+      }
+      main {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 0 14px;
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        gap: 16px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid #1f2a37;
+        border-radius: 16px;
+        overflow: hidden;
+      }
+      .card h2 {
+        margin: 0;
+        padding: 12px 14px;
+        border-bottom: 1px solid #1f2a37;
+        font-size: 15px;
+        color: #bcd1f1;
+      }
+      .pad {
+        padding: 12px 14px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #2a3b55;
+        background: #0d1320;
+        color: #fff;
+      }
+      .btn {
+        cursor: pointer;
+        border: none;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: #1a2433;
+        color: #d9e6ff;
+      }
+      .btn.accent {
+        background: linear-gradient(135deg, #1f9ee5, #6ee7ff);
+        color: #001521;
+        font-weight: 700;
+      }
+      .btn.ghost {
+        background: transparent;
+        border: 1px dashed #2a3b55;
+        color: #9fb6d8;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        border-bottom: 1px solid #1f2a37;
+        padding: 8px 6px;
+        text-align: right;
+      }
+      th {
+        font-size: 12px;
+        color: #9fb6d8;
+      }
+      td input {
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 8px;
+        border: 1px solid #2a3b55;
+        background: #0d1320;
+        color: #fff;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid #2a3852;
+        color: #bcd1f1;
+        background: #0f1524;
+      }
+      .pill.good {
+        border-color: #1f5a3b;
+        background: #0f1d16;
+        color: #b5f5cc;
+      }
+      .pill.bad {
+        border-color: #57243a;
+        background: #1a0f14;
+        color: #ffd0db;
+      }
+      .pill.warn {
+        border-color: #5a4a1f;
+        background: #1a1610;
+        color: #ffe6a3;
+      }
+      .result {
+        font-size: 15px;
+        line-height: 1.6;
+      }
+      #chart {
+        width: 100%;
+        height: 380px;
+        display: block;
+      }
+      .grid line {
+        stroke: #1f2a37;
+        stroke-width: 1;
+      }
+      .axis text {
+        fill: #9fb6d8;
+        font-size: 11px;
+      }
+      .legend {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 8px;
+      }
+      .legend span {
+        font-size: 12px;
+        color: #9fb6d8;
+      }
+      .badge {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .b1 {
+        background: #6ee7ff;
+      }
+      .b2 {
+        background: #a3e635;
+      }
+      .mini {
+        font-size: 12px;
+        color: #9fb6d8;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Корисність: EMV, EU, експоненціальна та таблична — з графіком і прикладами з конспекту</h1>
+    </header>
+    <main>
+      <section class="card">
+        <h2>Параметри</h2>
+        <div class="pad">
+          <div class="row">
+            <div>
+              <label>Модель u(x)</label>
+              <select id="mode">
+                <option value="exp">Експоненціальна: u(x)=1-e^{-r x}</option>
+                <option value="emv">EMV: u(x)=x</option>
+                <option value="table">Таблична: з інтерполяцією</option>
+              </select>
+            </div>
+            <div>
+              <label>Параметр r</label>
+              <input id="r" type="number" step="0.0001" value="0.0005" />
+            </div>
           </div>
-          <div>
-            <label>Ймовірність виграшу, p</label>
-            <input id="p" type="number" step="0.01" min="0" max="1" value="0.5" />
+          <div class="row">
+            <div>
+              <label>Початковий капітал w</label>
+              <input id="w" type="number" step="100" value="1000" />
+            </div>
+            <div>
+              <label>Ймовірність виграшу p</label>
+              <input id="p" type="number" step="0.01" min="0" max="1" value="0.5" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Виграш +a</label>
+              <input id="a" type="number" step="50" value="1500" />
+            </div>
+            <div>
+              <label>Програш b</label>
+              <input id="b" type="number" step="50" value="-1000" />
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn accent" id="calc">Обчислити</button>
+            <button class="btn" id="exUrn">Урна 99/1</button>
+            <button class="btn" id="exDelta">Δu приклади</button>
+            <button class="btn ghost" id="reset">Скинути</button>
+          </div>
+          <div class="mini" style="margin-top: 8px;">
+            У табличному режимі редагуйте точки нижче. В інших режимах таблиця ігнорується.
+          </div>
+          <h3 style="margin: 14px 0 8px; font-size: 14px; color: #bcd1f1;">Таблиця (гроші → корисність)</h3>
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align: left;">№</th>
+                <th>Гроші</th>
+                <th>Корисність</th>
+                <th style="text-align: center;">×</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+          <div class="actions">
+            <button class="btn" id="addRow">Додати вузол</button>
+            <button class="btn ghost" id="sort">Сортувати ↑</button>
           </div>
         </div>
-        <div class="row">
-          <div>
-            <label>Виграш (додати до w), +a</label>
-            <input id="a" type="number" step="50" value="1500" />
+      </section>
+
+      <section class="card">
+        <h2>Графік та рішення</h2>
+        <svg id="chart" viewBox="0 0 860 380"></svg>
+        <div class="pad">
+          <div class="legend">
+            <span class="badge b1"></span><span>u(w)</span>
+            <span class="badge b2"></span><span>EU і точки гри</span>
           </div>
-          <div>
-            <label>Програш (додати до w), b (негативний)</label>
-            <input id="b" type="number" step="50" value="-1000" />
-          </div>
+          <div id="attitude" class="pill" style="margin-top: 12px;"></div>
+          <div id="result" class="result" style="margin-top: 12px;"></div>
+          <div id="deltaOut" class="mini" style="margin-top: 8px;"></div>
         </div>
-        <div class="actions">
-          <button class="btn accent" id="calc">Обчислити рішення</button>
-          <button class="btn" id="resetDefaults">Заповнити приклад з умови</button>
-        </div>
+      </section>
+    </main>
 
-        <div style="margin-top:16px">
-          <div class="pill warn">Лінійна інтерполяція значень корисності між вузлами</div>
-        </div>
+    <script>
+      const tbody = document.getElementById("rows");
+      const chart = document.getElementById("chart");
+      const attitudeEl = document.getElementById("attitude");
+      const resultEl = document.getElementById("result");
+      const deltaOut = document.getElementById("deltaOut");
+      const $ = (id) => document.getElementById(id);
 
-        <h3 style="margin:18px 0 8px;font-size:14px;color:#bcd1f1">Таблиця (гроші → корисність)</h3>
-        <table>
-          <thead>
-            <tr>
-              <th style="text-align:left">№</th>
-              <th>Гроші</th>
-              <th>Корисність</th>
-              <th style="text-align:center">×</th>
-            </tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
-        <div class="actions">
-          <button class="btn" id="addRow">Додати вузол</button>
-          <button class="btn ghost" id="sort">Відсортувати ↑ за грошима</button>
-        </div>
-      </div>
-    </section>
+      const defaultPairs = [
+        { x: -3000, y: 0.14 },
+        { x: -1000, y: 0.55 },
+        { x: 0, y: 0.66 },
+        { x: 1000, y: 0.73 },
+        { x: 2000, y: 0.78 },
+        { x: 3000, y: 0.83 },
+        { x: 4000, y: 0.87 },
+        { x: 6000, y: 0.93 },
+        { x: 8000, y: 0.98 }
+      ];
 
-    <section class="card" aria-label="Візуалізація та результати">
-      <h2>Крива корисності та рішення</h2>
-      <svg id="chart" viewBox="0 0 800 360" role="img" aria-label="Графік корисності"></svg>
-      <div class="pad">
-        <div class="legend">
-          <span class="badge b1"></span><span>u(w) — крива корисності</span>
-          <span class="badge b2"></span><span>Очікувана корисність ставки</span>
-        </div>
-        <div id="attitude" class="pill" style="margin-top:12px"></div>
-        <div id="result" class="result" style="margin-top:12px"></div>
-      </div>
-    </section>
-  </main>
+      let pairs = JSON.parse(localStorage.getItem("utility_pairs_v3") || "null") || defaultPairs.slice();
 
+      function save() {
+        localStorage.setItem("utility_pairs_v3", JSON.stringify(pairs));
+      }
 
-  <script>
-    const tbody = document.getElementById('rows');
-    const chart = document.getElementById('chart');
-    const attitudeEl = document.getElementById('attitude');
-    const resultEl = document.getElementById('result');
-    const $ = (id)=>document.getElementById(id);
+      function renderTable() {
+        tbody.innerHTML = "";
+        pairs.forEach((p, i) => {
+          const tr = document.createElement("tr");
 
-    const defaultPairs = [
-      {x:-3000, y:0.14}, {x:-1000, y:0.55}, {x:0, y:0.66}, {x:1000, y:0.73},
-      {x:2000, y:0.78}, {x:3000, y:0.83}, {x:4000, y:0.87}, {x:6000, y:0.93}, {x:8000, y:0.98}
-    ];
+          const tdIdx = document.createElement("td");
+          tdIdx.style.textAlign = "left";
+          tdIdx.textContent = i + 1;
 
-    let pairs = JSON.parse(localStorage.getItem('utility_pairs') || 'null') || defaultPairs.slice();
+          const tdX = document.createElement("td");
+          const inX = document.createElement("input");
+          inX.type = "number";
+          inX.step = "50";
+          inX.value = p.x;
+          inX.oninput = (e) => {
+            p.x = parseFloat(e.target.value);
+            schedule();
+          };
+          tdX.appendChild(inX);
 
-    function save(){ localStorage.setItem('utility_pairs', JSON.stringify(pairs)); }
+          const tdY = document.createElement("td");
+          const inY = document.createElement("input");
+          inY.type = "number";
+          inY.step = "0.01";
+          inY.value = p.y;
+          inY.oninput = (e) => {
+            p.y = parseFloat(e.target.value);
+            schedule();
+          };
+          tdY.appendChild(inY);
 
-    function renderTable(){
-      tbody.innerHTML = '';
-      pairs.forEach((p, i)=>{
-        const tr = document.createElement('tr');
-        const tdIdx = document.createElement('td'); tdIdx.style.textAlign='left'; tdIdx.textContent = i+1;
-        const tdX = document.createElement('td');
-        const inX = document.createElement('input'); inX.type='number'; inX.step='50'; inX.value=p.x; inX.oninput = e=>{ p.x = parseFloat(e.target.value); schedule(); };
-        tdX.appendChild(inX);
-        const tdY = document.createElement('td');
-        const inY = document.createElement('input'); inY.type='number'; inY.step='0.01'; inY.min='-1'; inY.max='2'; inY.value=p.y; inY.oninput = e=>{ p.y = parseFloat(e.target.value); schedule(); };
-        tdY.appendChild(inY);
-        const tdDel = document.createElement('td'); tdDel.style.textAlign='center';
-        const delBtn = document.createElement('button'); delBtn.className='btn'; delBtn.textContent='Видалити';
-        delBtn.onclick = ()=>{ pairs.splice(i,1); schedule(); };
-        tdDel.appendChild(delBtn);
-        tr.append(tdIdx, tdX, tdY, tdDel);
-        tbody.appendChild(tr);
-      });
-    }
+          const tdDel = document.createElement("td");
+          tdDel.style.textAlign = "center";
+          const del = document.createElement("button");
+          del.className = "btn";
+          del.textContent = "Видалити";
+          del.onclick = () => {
+            pairs.splice(i, 1);
+            schedule();
+          };
+          tdDel.appendChild(del);
 
-    function u(x){
-      if (pairs.length===0) return NaN;
-      const arr = pairs.slice().sort((a,b)=>a.x-b.x);
-      if (x <= arr[0].x) return arr[0].y;
-      if (x >= arr[arr.length-1].x) return arr[arr.length-1].y;
-      for (let i=0;i<arr.length-1;i++){
-        const a = arr[i], b = arr[i+1];
-        if (x>=a.x && x<=b.x){
-          const t = (x - a.x) / (b.x - a.x);
-          return a.y + t*(b.y - a.y);
+          tr.append(tdIdx, tdX, tdY, tdDel);
+          tbody.appendChild(tr);
+        });
+      }
+
+      function uTable(x) {
+        if (pairs.length === 0) return NaN;
+        const arr = pairs.slice().sort((a, b) => a.x - b.x);
+        if (x <= arr[0].x) return arr[0].y;
+        if (x >= arr[arr.length - 1].x) return arr[arr.length - 1].y;
+        for (let i = 0; i < arr.length - 1; i++) {
+          const a = arr[i];
+          const b = arr[i + 1];
+          if (x >= a.x && x <= b.x) {
+            const t = (x - a.x) / (b.x - a.x);
+            return a.y + t * (b.y - a.y);
+          }
         }
+        return NaN;
       }
-      return NaN;
-    }
 
-    function riskAttitude(){
-      if (pairs.length < 3) return {sign:0, text:'Недостатньо точок'};
-      const arr = pairs.slice().sort((a,b)=>a.x-b.x);
-      let sum = 0, n=0;
-      for (let i=0;i<arr.length-2;i++){
-        const a=arr[i], b=arr[i+1], c=arr[i+2];
-        const d1 = (b.y - a.y) / (b.x - a.x);
-        const d2 = (c.y - b.y) / (c.x - b.x);
-        const second = d2 - d1; 
-        if (Number.isFinite(second)) { sum += second; n++; }
+      function uExp(x) {
+        const r = +$("r").value;
+        return 1 - Math.exp(-r * x);
       }
-      const avg = sum / Math.max(1,n);
-      if (avg < -1e-6) return {sign:-1, text:'Усереднено увігнута (risk-averse, уникає ризику)'};
-      if (avg >  1e-6) return {sign: 1, text:'Усереднено опукла (risk-seeking, схильна до ризику)'};
-      return {sign:0, text:'Близька до лінійної (risk-neutral, нейтральна до ризику)'};
-    }
 
-    function draw(){
-      const xs = pairs.map(p=>p.x); const ys = pairs.map(p=>p.y);
-      const minX = Math.min(...xs), maxX = Math.max(...xs);
-      const minY = Math.min(0, ...ys), maxY = Math.max(1, ...ys);
-      const pad = {l:60,r:20,t:18,b:36};
-      const W = 800, H = 360;
-      const plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
-      const sx = x => pad.l + ( (x - minX) / (maxX - minX) ) * plotW;
-      const sy = y => pad.t + (1 - ( (y - minY) / (maxY - minY) )) * plotH;
-
-      chart.innerHTML = '';
-      const gGrid = svg('g',{class:'grid'});
-      const ticksX = 6; for (let i=0;i<=ticksX;i++){
-        const x = pad.l + (i/ticksX)*plotW; gGrid.appendChild(line(x,pad.t,x,pad.t+plotH));
+      function uEmv(x) {
+        return x;
       }
-      const ticksY = 5; for (let i=0;i<=ticksY;i++){
-        const y = pad.t + (i/ticksY)*plotH; gGrid.appendChild(line(pad.l,y,pad.l+plotW,y));
-      }
-      chart.appendChild(gGrid);
 
-      const gAxis = svg('g',{class:'axis'});
-      for (let i=0;i<=ticksX;i++){
-        const vx = minX + (i/ticksX)*(maxX - minX);
-        gAxis.appendChild(text(sx(vx), H-pad.b+16, fmt(vx)));
+      function getU() {
+        const m = $("mode").value;
+        return m === "table" ? uTable : m === "exp" ? uExp : uEmv;
       }
-      for (let i=0;i<=ticksY;i++){
-        const vy = minY + (i/ticksY)*(maxY - minY);
-        gAxis.appendChild(text(pad.l-10, sy(vy)+4, vy.toFixed(2), 'end'));
+
+      function riskAttitude() {
+        const m = $("mode").value;
+        if (m === "emv") return { sign: 0, text: "Лінійна (risk‑neutral)" };
+        if (m === "exp") {
+          const r = +$("r").value;
+          return { sign: -1, text: "Увігнута (risk‑averse), r=" + r };
+        }
+        if (pairs.length < 3) return { sign: 0, text: "Недостатньо точок" };
+        const arr = pairs.slice().sort((a, b) => a.x - b.x);
+        let s = 0;
+        let n = 0;
+        for (let i = 0; i < arr.length - 2; i++) {
+          const a = arr[i];
+          const b = arr[i + 1];
+          const c = arr[i + 2];
+          const d1 = (b.y - a.y) / (b.x - a.x);
+          const d2 = (c.y - b.y) / (c.x - b.x);
+          const sec = d2 - d1;
+          if (Number.isFinite(sec)) {
+            s += sec;
+            n++;
+          }
+        }
+        const avg = s / Math.max(1, n);
+        if (avg < -1e-6) return { sign: -1, text: "Увігнута (risk‑averse)" };
+        if (avg > 1e-6) return { sign: 1, text: "Опукла (risk‑seeking)" };
+        return { sign: 0, text: "Лінійна (risk‑neutral)" };
       }
-      chart.appendChild(gAxis);
 
-      const sorted = pairs.slice().sort((a,b)=>a.x-b.x);
-      const path = sorted.map(p=>`${sx(p.x)},${sy(p.y)}`).join(' ');
-      chart.appendChild(polyline(path,'#6ee7ff',3));
-      sorted.forEach(p=> chart.appendChild(circle(sx(p.x), sy(p.y), 3.7, '#6ee7ff')) );
+      function draw() {
+        const xs = pairs.map((p) => p.x);
+        const w = +$("w").value;
+        const a = +$("a").value;
+        const b = +$("b").value;
+        xs.push(w, w + a, w + b);
 
-      const w = +$('w').value, a = +$('a').value, b = +$('b').value, p = +$('p').value;
-      const uw = u(w), ua = u(w+a), ub = u(w+b);
-      if (Number.isFinite(uw)){
-        const EU = p*ua + (1-p)*ub;
-        const wx = sx(w), wy = sy(uw);
-        chart.appendChild(circle(wx,wy,4,'#a3e635'));
-        chart.appendChild(circle(sx(w+a), sy(ua), 4,'#a3e635'));
-        chart.appendChild(circle(sx(w+b), sy(ub), 4,'#a3e635'));
+        const ys = pairs.map((p) => p.y);
+        const U = getU();
+        ys.push(U(Math.min(...xs)), U(Math.max(...xs)));
+
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(0, Math.min(...ys));
+        const maxY = Math.max(1, Math.max(...ys));
+
+        const pad = { l: 60, r: 20, t: 18, b: 36 };
+        const W = 860;
+        const H = 380;
+        const PW = W - pad.l - pad.r;
+        const PH = H - pad.t - pad.b;
+
+        const sx = (x) => pad.l + ((x - minX) / (maxX - minX)) * PW;
+        const sy = (y) => pad.t + (1 - (y - minY) / (maxY - minY)) * PH;
+
+        chart.innerHTML = "";
+
+        const gGrid = svg("g", { class: "grid" });
+        for (let i = 0; i <= 6; i++) {
+          const x = pad.l + (i / 6) * PW;
+          gGrid.appendChild(line(x, pad.t, x, pad.t + PH));
+        }
+        for (let i = 0; i <= 5; i++) {
+          const y = pad.t + (i / 5) * PH;
+          gGrid.appendChild(line(pad.l, y, pad.l + PW, y));
+        }
+        chart.appendChild(gGrid);
+
+        const gAxis = svg("g", { class: "axis" });
+        for (let i = 0; i <= 6; i++) {
+          const vx = minX + (i / 6) * (maxX - minX);
+          gAxis.appendChild(text(sx(vx), H - pad.b + 16, fmt(vx)));
+        }
+        for (let i = 0; i <= 5; i++) {
+          const vy = minY + (i / 5) * (maxY - minY);
+          gAxis.appendChild(text(pad.l - 10, sy(vy) + 4, vy.toFixed(2), "end"));
+        }
+        chart.appendChild(gAxis);
+
+        const sorted = pairs.slice().sort((a, b) => a.x - b.x);
+        const mode = $("mode").value;
+        if (mode !== "emv") {
+          const path = sorted.map((p) => `${sx(p.x)},${sy(getU()(p.x))}`).join(" ");
+          chart.appendChild(polyline(path, "#6ee7ff", 3));
+          sorted.forEach((p) => chart.appendChild(circle(sx(p.x), sy(getU()(p.x)), 3.7, "#6ee7ff")));
+        } else {
+          const path = [
+            [minX, getU()(minX)],
+            [maxX, getU()(maxX)]
+          ]
+            .map((p) => `${sx(p[0])},${sy(p[1])}`)
+            .join(" ");
+          chart.appendChild(polyline(path, "#6ee7ff", 3));
+        }
+
+        const uw = getU()(w);
+        const ua = getU()(w + a);
+        const ub = getU()(w + b);
+        chart.appendChild(circle(sx(w), sy(uw), 4, "#a3e635"));
+        chart.appendChild(circle(sx(w + a), sy(ua), 4, "#a3e635"));
+        chart.appendChild(circle(sx(w + b), sy(ub), 4, "#a3e635"));
+
+        const p = +$("p").value;
+        const EU = p * ua + (1 - p) * ub;
         const gy = sy(EU);
-        chart.appendChild(line(pad.l, gy, pad.l+plotW, gy, '#a3e635', 1.5, [6,4]));
+        chart.appendChild(line(pad.l, gy, pad.l + PW, gy, "#a3e635", 1.6, [6, 4]));
       }
-    }
 
-    function svg(tag, attrs){ const el=document.createElementNS('http://www.w3.org/2000/svg', tag); if(attrs) for(const k in attrs) el.setAttribute(k, attrs[k]); return el; }
-    function line(x1,y1,x2,y2,stroke='#29364c',w=1.2,dash=null){ const l=svg('line',{x1,y1,x2,y2,stroke,'stroke-width':w}); if(dash) l.setAttribute('stroke-dasharray', dash.join(',')); return l; }
-    function text(x,y,content,anchor='middle'){ const t=svg('text',{x,y,'text-anchor':anchor}); t.textContent=content; return t; }
-    function circle(cx,cy,r,fill='#6ee7ff'){ return svg('circle',{cx,cy,r,fill}); }
-    function polyline(points, stroke='#6ee7ff', w=2){ return svg('polyline',{points,fill:'none',stroke,'stroke-width':w}); }
-    function fmt(n){
-      if (Math.abs(n)>=1000 && Math.abs(n)%1000===0) return n.toLocaleString('uk-UA');
-      return (Math.abs(n)>=1000? n.toLocaleString('uk-UA'): n.toFixed(0));
-    }
+      function compute() {
+        renderTable();
+        draw();
 
-    function compute(){
-      renderTable(); draw();
-      const r = riskAttitude();
-      attitudeEl.className = 'pill ' + (r.sign<0? 'good': r.sign>0? 'bad':'warn');
-      attitudeEl.textContent = 'Тип функції: ' + r.text;
+        const U = getU();
+        const w = +$("w").value;
+        const a = +$("a").value;
+        const b = +$("b").value;
+        const p = +$("p").value;
 
-      const w = +$('w').value, a = +$('a').value, b = +$('b').value, p = +$('p').value;
-      const uw = u(w), ua = u(w+a), ub = u(w+b);
-      if (![uw,ua,ub,p].every(Number.isFinite)){ resultEl.innerHTML = '<em>Перевірте дані</em>'; return; }
-      const EU = p*ua + (1-p)*ub;
-      const verdict = EU > uw ? '<strong style="color:var(--good)">Грати варто</strong>' : EU < uw ? '<strong style="color:var(--bad)">Краще відмовитись</strong>' : '<strong>Байдуже</strong>';
-      resultEl.innerHTML = `${verdict}.<br>u(w)=${uw.toFixed(3)},  EU=${EU.toFixed(3)}  (p=${p},  u(w+a)=${ua.toFixed(3)},  u(w+b)=${ub.toFixed(3)}).`;
-    }
+        const uw = U(w);
+        const ua = U(w + a);
+        const ub = U(w + b);
+        const EU = p * ua + (1 - p) * ub;
 
-    let raf = null; function schedule(){ cancelAnimationFrame(raf); save(); raf = requestAnimationFrame(compute); }
+        const verdictEU = EU > uw ? "Грати" : EU < uw ? "Не грати" : "Байдуже";
+        const EMV_play = p * a + (1 - p) * b;
+        const EMV_verdict = EMV_play > 0 ? "Грати" : EMV_play < 0 ? "Не грати" : "Байдуже";
 
-    $('addRow').onclick = ()=>{ pairs.push({x:0,y:0}); schedule(); };
-    $('sort').onclick = ()=>{ pairs.sort((a,b)=>a.x-b.x); schedule(); };
-    $('calc').onclick = ()=> schedule();
-    $('resetDefaults').onclick = ()=>{ pairs = defaultPairs.slice(); schedule(); };
-    ['w','a','b','p'].forEach(id=> $(id).addEventListener('input', schedule));
+        const r = riskAttitude();
+        attitudeEl.className = "pill " + (r.sign < 0 ? "good" : r.sign > 0 ? "bad" : "warn");
+        attitudeEl.textContent = "Тип: " + r.text;
 
-    compute();
-  </script>
-</body>
+        resultEl.innerHTML =
+          `EU: u(w)=${uw.toFixed(3)}, u(w+a)=${ua.toFixed(3)}, u(w+b)=${ub.toFixed(3)}, EU=${EU.toFixed(3)} → <strong>${verdictEU}</strong><br>` +
+          `EMV: p·a+(1−p)·b=${EMV_play.toLocaleString("uk-UA", { maximumFractionDigits: 2 })} → <strong>${EMV_verdict}</strong>`;
+      }
+
+      let raf = null;
+      function schedule() {
+        cancelAnimationFrame(raf);
+        save();
+        raf = requestAnimationFrame(compute);
+      }
+
+      function svg(tag, attrs) {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+        if (attrs) {
+          for (const k in attrs) el.setAttribute(k, attrs[k]);
+        }
+        return el;
+      }
+      function line(x1, y1, x2, y2, stroke = "#29364c", w = 1.2, dash = null) {
+        const l = svg("line", { x1, y1, x2, y2, stroke, "stroke-width": w });
+        if (dash) l.setAttribute("stroke-dasharray", dash.join(","));
+        return l;
+      }
+      function text(x, y, content, anchor = "middle") {
+        const t = svg("text", { x, y, "text-anchor": anchor });
+        t.textContent = content;
+        return t;
+      }
+      function circle(cx, cy, r, fill = "#6ee7ff") {
+        return svg("circle", { cx, cy, r, fill });
+      }
+      function polyline(points, stroke = "#6ee7ff", w = 2) {
+        return svg("polyline", { points, fill: "none", stroke, "stroke-width": w });
+      }
+      function fmt(n) {
+        if (Math.abs(n) >= 1000 && Math.abs(n) % 1000 === 0) return n.toLocaleString("uk-UA");
+        return Math.abs(n) >= 1000 ? n.toLocaleString("uk-UA") : n.toFixed(0);
+      }
+
+      $("addRow").onclick = () => {
+        pairs.push({ x: 0, y: 0 });
+        schedule();
+      };
+      $("sort").onclick = () => {
+        pairs.sort((a, b) => a.x - b.x);
+        schedule();
+      };
+      $("calc").onclick = () => schedule();
+      $("reset").onclick = () => {
+        pairs = defaultPairs.slice();
+        $("mode").value = "exp";
+        $("r").value = "0.0005";
+        $("w").value = "1000";
+        $("a").value = "1500";
+        $("b").value = "-1000";
+        $("p").value = "0.5";
+        deltaOut.textContent = "";
+        schedule();
+      };
+      $("exUrn").onclick = () => {
+        $("mode").value = "exp";
+        $("w").value = "0";
+        $("a").value = "1000000";
+        $("b").value = "-10000";
+        $("p").value = "0.01";
+        schedule();
+      };
+      $("exDelta").onclick = () => {
+        const U = getU();
+        const d1 = (U(200) - U(100)).toFixed(3);
+        const d2 = (U(500) - U(400)).toFixed(3);
+        const d3 = (U(400) - U(300)).toFixed(3);
+        const d4 = (U(200) - U(100)).toFixed(3);
+        deltaOut.textContent = `Δu(200−100)=${d1}; Δu(500−400)=${d2}; Δu(400−300)=${d3}; Δu(200−100)=${d4}`;
+      };
+
+      ["w", "a", "b", "p", "mode", "r"].forEach((id) => $(id).addEventListener("input", schedule));
+
+      compute();
+    </script>
+  </body>
 </html>
