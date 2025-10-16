@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Аналіз чутливості табл.2</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{background:#ffffff;color:#000000;font-family:sans-serif;text-align:center}
+input{width:50px;text-align:center}
+.arrow{color:lime;font-size:40px;margin-top:-10px}
+</style>
+</head>
+<body>
+<h2>Аналіз чутливості (табл.2)</h2>
+
+<p>Введи прибутки (табл.2):</p>
+<table border="1" style="margin:auto;border-collapse:collapse;color:rgb(0, 0, 0)">
+<tr><th></th><th>N1</th><th>N2</th><th>N3</th></tr>
+<tr><td>A</td><td><input id="a1" value="6"></td><td><input id="a2" value="6"></td><td><input id="a3" value="6"></td></tr>
+<tr><td>B</td><td><input id="b1" value="5"></td><td><input id="b2" value="8"></td><td><input id="b3" value="8"></td></tr>
+<tr><td>C</td><td><input id="c1" value="-3"></td><td><input id="c2" value="4"></td><td><input id="c3" value="12"></td></tr>
+</table>
+
+<p>Ймовірності станів (сума = 1):  
+P1=<input id="p1" value="0.3">  
+P2=<input id="p2" value="0.5">  
+P3=<input id="p3" value="0.2"></p>
+
+<button onclick="build()">🔄 Побудувати графік</button>
+<div class="arrow">▼</div>
+<p>Графік покаже залежність очікуваного прибутку від <b>P1</b> (чутливість відносно P1)</p>
+<canvas id="chart" width="850" height="450"></canvas>
+
+<script>
+function build(){
+  const profit={
+    A:[+a1.value,+a2.value,+a3.value],
+    B:[+b1.value,+b2.value,+b3.value],
+    C:[+c1.value,+c2.value,+c3.value]
+  };
+  const P2start=+p2.value, P3start=+p3.value;
+  const labels=[], dataA=[], dataB=[], dataC=[];
+  for(let p1=0;p1<=1.001;p1+=0.05){
+    const scale=(1-p1)/(1-(+p1.value||0.3));
+    const P2=P2start*scale, P3=P3start*scale;
+    const f=a=>p1*profit[a][0]+P2*profit[a][1]+P3*profit[a][2];
+    labels.push(p1.toFixed(2));
+    dataA.push(f('A')); dataB.push(f('B')); dataC.push(f('C'));
+  }
+  if(window.chartObj) chartObj.destroy();
+  chartObj=new Chart(chart,{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'A',data:dataA,borderColor:'red',fill:false},
+      {label:'B',data:dataB,borderColor:'lime',fill:false},
+      {label:'C',data:dataC,borderColor:'deepskyblue',fill:false}
+    ]},
+    options:{
+      scales:{x:{title:{display:true,text:'P1'}},y:{title:{display:true,text:'Очікуваний прибуток'}}},
+      plugins:{legend:{labels:{color:'black'}}}
+    }
+  });
+}
+build();
+</script>
+</body>
+</html>
