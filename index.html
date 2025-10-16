@@ -1,44 +1,207 @@
 <!doctype html>
 <html lang="uk">
 <meta charset="utf-8">
-<title>Газетний кіоск — моделювання</title>
+<title>Інтерактивне моделювання: газетний кіоск</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 <style>
-  body { font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 24px; max-width: 900px; margin: auto; }
-  table { border-collapse: collapse; margin: 12px 0; }
-  td, th { border: 1px solid #ccc; padding: 6px 10px; text-align: right; }
-  th:first-child, td:first-child { text-align: left; }
-  .ok { background: #e8fff0; }
+  :root{--bg:#fcfcfc;--fg:#e8e8e8;--muted:#a8a8a8;--accent:#7dd3fc;--ok:#16a34a22;--warn:#f59e0b22;}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1100px;margin:auto;padding:24px}
+  h1{font-size:20px;margin:0 0 12px}
+  .grid{display:grid;gap:12px}
+  .panel{background:#121418;border:1px solid #1f222a;border-radius:14px;padding:14px}
+  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+  label{display:grid;gap:6px;font-size:12px;color:var(--muted)}
+  input,select,button{border:1px solid #2a2f3a;background:#0f1217;color:var(--fg);border-radius:10px;padding:10px 12px;font:14px system-ui}
+  input[type="number"]{width:120px}
+  .probcell{width:90px}
+  button.primary{background:#0b1320;border-color:#1b2a45}
+  button.accent{background:#0c1720;border-color:#123044}
+  table{border-collapse:collapse;width:100%;overflow:auto}
+  th,td{border:1px solid #2a2f3a;padding:8px 10px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  .ok{background:var(--ok)}
+  .warn{background:var(--warn)}
+  .muted{color:var(--muted)}
+  .split{display:grid;grid-template-columns:1fr;gap:12px}
+  @media(min-width:900px){.split{grid-template-columns:1.1fr .9fr}}
+  .badge{display:inline-block;padding:3px 8px;border:1px solid #334; border-radius:999px; font-size:12px; color:#aee}
 </style>
-<h1>Газетний кіоск</h1>
-<div id="out"></div>
+
+<div class="wrap">
+  <h1>Інтерактивне моделювання задачі газетного кіоску</h1>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="row">
+        <label>Ціна продажу p
+          <input id="p" type="number" step="0.01" value="0.75">
+        </label>
+        <label>Собівартість c
+          <input id="c" type="number" step="0.01" value="0.40">
+        </label>
+        <label>Штраф за незадоволений попит h
+          <input id="h" type="number" step="0.01" value="0.50">
+        </label>
+        <label>Макс. попит d<sub>max</sub>
+          <input id="dmax" type="number" min="0" max="20" step="1" value="3">
+        </label>
+        <label>Макс. замовлення q<sub>max</sub>
+          <input id="qmax" type="number" min="0" max="20" step="1" value="3">
+        </label>
+        <button id="grow" class="accent">+ Стан попиту</button>
+        <button id="shrink" class="accent">− Стан попиту</button>
+        <button id="uniform" class="accent">Унів. розподіл</button>
+        <button id="normalize" class="accent">Нормалізувати</button>
+        <button id="calc" class="primary">Перерахувати</button>
+      </div>
+      <div class="muted" style="margin-top:6px">Ймовірності можна редагувати в таблиці нижче. Сума нормалізується кнопкою «Нормалізувати».</div>
+    </div>
+
+    <div class="panel">
+      <div id="probs"></div>
+    </div>
+
+    <div class="split">
+      <div class="panel">
+        <div id="payoff"></div>
+      </div>
+      <div class="panel">
+        <div id="expected"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div id="summary"></div>
+    </div>
+  </div>
+</div>
 
 <script>
-const sellPrice = 0.75, buyCost = 0.40, lostSale = 0.50;
-const demands = [0,1,2,3], probs = [0.1,0.3,0.4,0.2], orders = [0,1,2,3];
-const payoff = (q,d) => +(sellPrice*Math.min(q,d) - buyCost*q - lostSale*Math.max(d-q,0)).toFixed(2);
-function expected(q){ return +demands.reduce((s,d,i)=> s + payoff(q,d)*probs[i], 0).toFixed(3); }
-function render(){
-  const out = document.getElementById('out');
-  let html = '<h2>Таблиця виплат π(q,d)</h2><table><tr><th>q \\ d</th>';
-  demands.forEach(d=> html += `<th>${d}</th>`);
-  html += '</tr>';
-  const exp = [];
-  orders.forEach(q=>{
-    html += `<tr><td>${q}</td>`;
-    demands.forEach(d=> html += `<td>${payoff(q,d)}</td>`);
-    html += '</tr>';
-    exp.push({q, val: expected(q)});
-  });
-  html += '</table>';
-  const best = exp.reduce((a,b)=> b.val>a.val?b:a);
-  html += '<h2>Очікуваний прибуток E[π|q]</h2><table><tr><th>q</th><th>E[π]</th></tr>';
-  exp.forEach(r=>{
-    const cls = r.q===best.q ? ' class="ok"' : '';
-    html += `<tr${cls}><td>${r.q}</td><td>${r.val}</td></tr>`;
-  });
-  html += '</table>';
-  html += `<p><strong>Оптимальне рішення:</strong> замовляти <strong>q* = ${best.q}</strong> газет (макс. E[π] = <strong>${best.val}</strong>).</p>`;
-  out.innerHTML = html;
+let state = {
+  p:0.75, c:0.40, h:0.50,
+  dmax:3, qmax:3,
+  probs:[0.1,0.3,0.4,0.2]
+};
+
+const $=s=>document.querySelector(s);
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+function fmt(x,dec=2){return Number.isFinite(x)?(+x).toFixed(dec):'—'}
+function payoff(p,c,h,q,d){
+  const sold = Math.min(q,d);
+  return +(p*sold - c*q - h*Math.max(d-q,0)).toFixed(2);
 }
-render();
+function normalize(arr){
+  const sum = arr.reduce((a,b)=>a+(+b||0),0);
+  if(sum<=0){const u=1/arr.length; return arr.map(_=>+u.toFixed(4))}
+  return arr.map(v=>+(v/sum).toFixed(4));
+}
+function uniform(n){const u=+(1/n).toFixed(4); return Array.from({length:n},()=>u)}
+function buildProbTable(){
+  const n = state.dmax+1;
+  if(state.probs.length!==n){ state.probs = uniform(n) }
+  let html = '<h3>Ймовірності попиту P(d)</h3>';
+  html += '<table><tr><th>d</th>';
+  for(let d=0; d<=state.dmax; d++) html+=`<th>${d}</th>`;
+  html += '</tr><tr><td>P(d)</td>';
+  for(let d=0; d<=state.dmax; d++){
+    html+=`<td><input class="probcell" data-idx="${d}" type="number" step="0.0001" value="${state.probs[d]}"></td>`;
+  }
+  const sum = state.probs.reduce((a,b)=>a+Number(b||0),0);
+  html += `</tr><tr><td>Σ</td><td colspan="${n}" class="${Math.abs(sum-1)<1e-6?'':'warn'}">${sum.toFixed(4)}</td></tr></table>`;
+  $('#probs').innerHTML = html;
+  document.querySelectorAll('.probcell').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const i = +e.target.dataset.idx;
+      state.probs[i] = +e.target.value;
+    });
+  });
+}
+function computePayoff(){
+  const p=state.p,c=state.c,h=state.h;
+  const dmax=state.dmax,qmax=state.qmax;
+  const table=[];
+  for(let q=0;q<=qmax;q++){
+    const row=[];
+    for(let d=0;d<=dmax;d++) row.push(payoff(p,c,h,q,d));
+    table.push(row);
+  }
+  return table;
+}
+function renderPayoff(){
+  const tbl = computePayoff();
+  let html = '<h3>Таблиця виплат π(q,d)</h3><table><tr><th>q \\ d</th>';
+  for(let d=0; d<=state.dmax; d++) html+=`<th>${d}</th>`;
+  html+='</tr>';
+  for(let q=0; q<=state.qmax; q++){
+    html+=`<tr><td>${q}</td>`;
+    for(let d=0; d<=state.dmax; d++) html+=`<td>${fmt(tbl[q][d],2)}</td>`;
+    html+='</tr>';
+  }
+  html+='</table>';
+  $('#payoff').innerHTML = html;
+}
+function expectedFor(q, tbl){
+  let s=0;
+  for(let d=0; d<=state.dmax; d++) s += tbl[q][d]*(+state.probs[d]||0);
+  return +s.toFixed(3);
+}
+function renderExpected(){
+  const tbl = computePayoff();
+  let rows=[];
+  for(let q=0;q<=state.qmax;q++) rows.push({q,val:expectedFor(q,tbl)});
+  const best = rows.reduce((a,b)=> b.val>a.val?b:a, rows[0]);
+  let html = '<h3>Очікуваний прибуток E[π|q]</h3><table><tr><th>q</th><th>E[π]</th></tr>';
+  rows.forEach(r=>{
+    const cls = r.q===best.q?' class="ok"':'';
+    html+=`<tr${cls}><td>${r.q}</td><td>${fmt(r.val,3)}</td></tr>`;
+  });
+  html+='</table>';
+  $('#expected').innerHTML = html;
+  $('#summary').innerHTML = `
+    <div><span class="badge">Оптимум</span> Найкраще замовлення: <b>q* = ${best.q}</b>, очікуваний прибуток <b>${fmt(best.val,3)}</b>.</div>
+    <div class="muted" style="margin-top:6px">Можеш змінювати p, c, h, межі q та розподіл P(d) — натискай «Перерахувати».</div>
+  `;
+}
+function recalcFromInputs(){
+  state.p = +$('#p').value;
+  state.c = +$('#c').value;
+  state.h = +$('#h').value;
+  state.dmax = clamp(Math.floor(+$('#dmax').value),0,20);
+  state.qmax = clamp(Math.floor(+$('#qmax').value),0,20);
+  if(state.probs.length!==state.dmax+1) state.probs = uniform(state.dmax+1);
+  buildProbTable();
+  renderPayoff();
+  renderExpected();
+}
+$('#calc').addEventListener('click', ()=>{
+  recalcFromInputs();
+});
+$('#uniform').addEventListener('click', ()=>{
+  state.probs = uniform(state.dmax+1);
+  buildProbTable();
+});
+$('#normalize').addEventListener('click', ()=>{
+  state.probs = normalize(state.probs);
+  buildProbTable();
+});
+$('#grow').addEventListener('click', ()=>{
+  state.dmax = clamp(state.dmax+1,0,20);
+  $('#dmax').value = state.dmax;
+  state.probs = normalize([...state.probs, 0.001]);
+  if(state.qmax<state.dmax) { state.qmax = state.dmax; $('#qmax').value = state.qmax; }
+  buildProbTable(); renderPayoff(); renderExpected();
+});
+$('#shrink').addEventListener('click', ()=>{
+  if(state.dmax===0) return;
+  state.dmax = clamp(state.dmax-1,0,20);
+  $('#dmax').value = state.dmax;
+  state.probs = normalize(state.probs.slice(0,state.dmax+1));
+  if(state.qmax>state.dmax) { state.qmax = state.dmax; $('#qmax').value = state.qmax; }
+  buildProbTable(); renderPayoff(); renderExpected();
+});
+['#p','#c','#h','#dmax','#qmax'].forEach(sel=>{
+  $(sel).addEventListener('change', recalcFromInputs);
+});
+recalcFromInputs();
 </script>
