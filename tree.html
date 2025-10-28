@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Дерево рішень</title>
+<style>
+body{font-family:sans-serif;max-width:900px;margin:30px auto;padding:20px;background:#fafafa}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input,button{padding:8px;border:1px solid #ccc;border-radius:6px;width:100%;box-sizing:border-box}
+button{background:#0066cc;color:#fff;cursor:pointer;border:none}
+button.secondary{background:#555}
+.output{margin-top:15px;background:#fff;border:1px solid #ddd;padding:12px;border-radius:8px}
+pre{white-space:pre-wrap;font-family:monospace}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<h2>Аналіз дерева рішень</h2>
+<div class="grid">
+<div><label>Ймовірність високого попиту</label><input id="p_high" type="number" step="0.01" value="0.6"></div>
+<div><label>Прибуток (мала потужність, низький попит)</label><input id="small_low" type="number" value="400000"></div>
+<div><label>Прибуток (зберегти малу при високому попиті)</label><input id="keep_small" type="number" value="50000"></div>
+<div><label>Прибуток (розширити малу при високому попиті)</label><input id="expand_small" type="number" value="450000"></div>
+<div><label>Прибуток (велика потужність, високий попит)</label><input id="large_high" type="number" value="800000"></div>
+<div><label>Прибуток (велика потужність, низький попит)</label><input id="large_low" type="number" value="-10000"></div>
+<div><button id="calc">Розрахувати</button></div>
+<div><button class="secondary" id="reset">Скинути</button></div>
+</div>
+<div class="output"><pre id="res"></pre></div>
+<script>
+function f(n){return n.toLocaleString('en-US',{maximumFractionDigits:2})}
+calc.onclick=()=>{let p=parseFloat(p_high.value),q=1-p,sl=+small_low.value,ks=+keep_small.value,es=+expand_small.value,lh=+large_high.value,ll=+large_low.value,bh=es>=ks?es:ks,evs=q*sl+p*bh,evl=q*ll+p*lh,r=evl>evs?["ВЕЛИКУ",evl]:["МАЛУ",evs];res.textContent=`p_high=${p} p_low=${q}
+Мала: низький ${f(sl)}, високий (${es>=ks?"розширити":"зберегти"})=${f(bh)}
+Велика: низький ${f(ll)}, високий ${f(lh)}
+
+EV(мала)=${f(q*sl)}+${f(p*bh)}=${f(evs)}
+EV(велика)=${f(q*ll)}+${f(p*lh)}=${f(evl)}
+
+Рішення: будувати ${r[0]} потужність (очікуваний прибуток ${f(r[1])})`}
+reset.onclick=()=>{p_high.value=0.6;small_low.value=400000;keep_small.value=50000;expand_small.value=450000;large_high.value=800000;large_low.value=-10000;res.textContent=""}
+</script>
+</body>
+</html>
