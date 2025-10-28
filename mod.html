@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Калькулятор ОПР</title>
+  <style>
+    :root{--bd:#e5e7eb;--bg:#f6f7fb;--tx:#111;--mut:#666}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;margin:0;background:var(--bg);color:var(--tx)}
+    .wrap{max-width:1100px;margin:0 auto;padding:24px}
+    h1{font-size:22px;margin:0 0 16px}
+    h2{font-size:18px;margin:0 0 12px}
+    .card{background:#fff;border:1px solid var(--bd);border-radius:16px;padding:16px;margin:16px 0}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+    label{display:flex;flex-direction:column;font-size:12px;color:#555}
+    input,button{font:inherit}
+    input[type=number],input[type=text]{border:1px solid #cfd3d9;border-radius:12px;padding:8px}
+    button{border:1px solid #cfd3d9;border-radius:12px;padding:8px 12px;background:#fff;cursor:pointer}
+    button:hover{background:#f7f7f7}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+    th{background:#f8fafc}
+    .pill{display:inline-block;padding:2px 8px;border-radius:10px}
+    .ok{background:#ecfdf5;color:#065f46}
+    .warn{background:#fff1f2;color:#9f1239}
+    .note{background:#eef2ff;color:#3730a3;border-radius:12px;padding:10px}
+    .mut{font-size:12px;color:var(--mut);text-align:center;padding-top:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Калькулятор ОПР: Break‑Even + Критерії</h1>
+
+    <div class="card" id="be">
+      <div class="grid">
+        <div style="grid-column:span 4">
+          <h2>Break‑even з покроковими FC</h2>
+          <div class="grid">
+            <label style="grid-column:span 12">R
+              <input type="number" id="be_price" value="40" />
+            </label>
+            <label style="grid-column:span 12">VC
+              <input type="number" id="be_vc" value="10" />
+            </label>
+            <label style="grid-column:span 12">SP
+              <input type="number" id="be_sp" value="4000" />
+            </label>
+            <label style="grid-column:span 6">Qmin
+              <input type="number" id="be_qmin" value="580" />
+            </label>
+            <label style="grid-column:span 6">Qmax
+              <input type="number" id="be_qmax" value="660" />
+            </label>
+            <div id="be_margin" style="grid-column:span 12" class="note"></div>
+            <div style="grid-column:span 12" class="grid">
+              <button id="be_add">Додати варіант</button>
+              <button id="be_fill">Заповнити приклад</button>
+            </div>
+          </div>
+        </div>
+        <div style="grid-column:span 8">
+          <table>
+            <thead>
+              <tr>
+                <th>№</th>
+                <th>FC</th>
+                <th>Q від</th>
+                <th>Q до</th>
+                <th>Qбез</th>
+                <th>Q для SP</th>
+                <th>Прибуток [Qmin, mid, Qmax]</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="be_tbody"></tbody>
+          </table>
+          <div class="note" style="margin-top:12px">
+            <b>Висновок: </b><span id="be_out"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="motel">
+      <h2>Мотель — критерії вибору</h2>
+      <div class="grid">
+        <div style="grid-column:span 8;overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Дія / Стан</th>
+                <th><input id="s0" value="Дозволено" /></th>
+                <th><input id="s1" value="Заборонено" /></th>
+                <th>max</th>
+                <th>min</th>
+                <th>avg</th>
+                <th>EV</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="mt_tbody"></tbody>
+          </table>
+        </div>
+        <div style="grid-column:span 4">
+          <div class="grid">
+            <label style="grid-column:span 12">p
+              <input type="number" id="mt_p" value="0.35" step="0.01" min="0" max="1" />
+            </label>
+            <button id="mt_add" style="grid-column:span 6">Додати дію</button>
+            <button id="mt_fill" style="grid-column:span 6">Заповнити приклад</button>
+            <div class="note" style="grid-column:span 12">
+              <b>Висновок:</b>
+              <ul id="mt_out" style="margin:6px 0 0 18px"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mut">TC=FC+VC·Q, TR=R·Q, Qбез=FC/(R−VC), P=Q·(R−VC)−FC</div>
+  </div>
+
+  <script>
+    function el(tag, props, children){
+      const e=document.createElement(tag);
+      if(props){Object.keys(props).forEach(k=>{
+        if(k==='class') e.className=props[k];
+        else if(k==='text') e.textContent=props[k];
+        else e.setAttribute(k,props[k]);
+      });}
+      if(children){children.forEach(c=>e.appendChild(c));}
+      return e;
+    }
+
+    const be = {
+      price: 40,
+      vc: 10,
+      sp: 4000,
+      qmin: 580,
+      qmax: 660,
+      rows: [
+        { fc: 9600, from: 0, to: 300 },
+        { fc: 15000, from: 301, to: 600 },
+        { fc: 20000, from: 601, to: 900 }
+      ]
+    };
+
+    function beReadInputs(){
+      be.price = Number(document.getElementById('be_price').value||0);
+      be.vc    = Number(document.getElementById('be_vc').value||0);
+      be.sp    = Number(document.getElementById('be_sp').value||0);
+      be.qmin  = Number(document.getElementById('be_qmin').value||0);
+      be.qmax  = Number(document.getElementById('be_qmax').value||0);
+    }
+
+    function beRenderRow(o, i, margin, mid){
+      const tr = el('tr');
+
+      const tdIdx = el('td', { text: String(i+1) });
+
+      const tdFc  = el('td');
+      const inFc  = el('input', { type:'number', value:String(o.fc) });
+      inFc.oninput = () => { o.fc = Number(inFc.value||0); beRender(); };
+      tdFc.appendChild(inFc);
+
+      const tdFrom = el('td');
+      const inFrom = el('input', { type:'number', value:String(o.from) });
+      inFrom.oninput = () => { o.from = Number(inFrom.value||0); beRender(); };
+      tdFrom.appendChild(inFrom);
+
+      const tdTo = el('td');
+      const inTo = el('input', { type:'number', value:String(o.to) });
+      inTo.oninput = () => { o.to = Number(inTo.value||0); beRender(); };
+      tdTo.appendChild(inTo);
+
+      const qbe = margin>0 ? Math.ceil(o.fc / margin) : Infinity;
+      const qsp = margin>0 ? Math.ceil((be.sp + o.fc) / margin) : Infinity;
+
+      const tdQbe = el('td');
+      tdQbe.textContent = isFinite(qbe) ? String(qbe) : '—';
+      if(isFinite(qbe) && !(qbe>=o.from && qbe<=o.to)){
+        const tag = el('span', { class:'pill warn', text:'поза' });
+        tdQbe.appendChild(el('span',{text:' '}));
+        tdQbe.appendChild(tag);
+      }
+
+      const tdQsp = el('td');
+      tdQsp.textContent = isFinite(qsp) ? String(qsp) : '—';
+      if(isFinite(qsp) && !(qsp>=o.from && qsp<=o.to)){
+        const tag = el('span', { class:'pill warn', text:'поза' });
+        tdQsp.appendChild(el('span',{text:' '}));
+        tdQsp.appendChild(tag);
+      }
+
+      const p1 = (be.qmin>=o.from && be.qmin<=o.to) ? be.qmin*margin - o.fc : -Infinity;
+      const p2 = (mid>=o.from   && mid<=o.to)       ? mid*margin   - o.fc : -Infinity;
+      const p3 = (be.qmax>=o.from && be.qmax<=o.to) ? be.qmax*margin - o.fc : -Infinity;
+      const worst = Math.min(p1,p2,p3);
+      const best  = Math.max(p1,p2,p3);
+
+      const tdProf = el('td');
+      const pill1  = el('span', { class: 'pill ' + (best<0?'warn':'ok'), text: 'найгірший: ' + (worst===-Infinity?'н/д':worst) });
+      const pill2  = el('span', { class: 'pill', text: 'найкращий: ' + (best===-Infinity?'н/д':best) });
+      tdProf.appendChild(pill1);
+      tdProf.appendChild(el('span', { text:' ' }));
+      tdProf.appendChild(pill2);
+
+      const tdDel = el('td');
+      const btn   = el('button', { text:'✕' });
+      btn.onclick = () => { be.rows.splice(i,1); beRender(); };
+      tdDel.appendChild(btn);
+
+      tr.appendChild(tdIdx);
+      tr.appendChild(tdFc);
+      tr.appendChild(tdFrom);
+      tr.appendChild(tdTo);
+      tr.appendChild(tdQbe);
+      tr.appendChild(tdQsp);
+      tr.appendChild(tdProf);
+      tr.appendChild(tdDel);
+
+      return { tr, worst, best };
+    }
+
+    function beRender(){
+      beReadInputs();
+      const margin = be.price - be.vc;
+      const mid = Math.floor((be.qmin + be.qmax) / 2);
+      const tbody = document.getElementById('be_tbody');
+      tbody.innerHTML = '';
+
+      const summary = [];
+      const bestList = [];
+
+      for(let i=0;i<be.rows.length;i++){
+        const { tr, worst, best } = beRenderRow(be.rows[i], i, margin, mid);
+        tbody.appendChild(tr);
+        bestList.push({ i, worst, best });
+      }
+
+      if(bestList.length){
+        let bestByMax = bestList[0];
+        let safest    = bestList[0];
+        for(const r of bestList){
+          if(r.best > bestByMax.best) bestByMax = r;
+          if(r.worst > safest.worst)  safest    = r;
+        }
+        const out = document.getElementById('be_out');
+        out.textContent = 'Макс. очікуваний прибуток у [' + be.qmin + '; ' + be.qmax + '] дає варіант №' + (bestByMax.i+1) + '. Найбезпечніший за maximin — варіант №' + (safest.i+1) + '.';
+      }
+
+      const mDiv = document.getElementById('be_margin');
+      mDiv.textContent = 'Маржинальний дохід: ' + (isFinite(margin)?margin:'—');
+    }
+
+    function beBind(){
+      document.getElementById('be_add').onclick = function(){
+        be.rows.push({ fc:0, from:0, to:0 });
+        beRender();
+      };
+      document.getElementById('be_fill').onclick = function(){
+        be.price=40;be.vc=10;be.sp=4000;be.qmin=580;be.qmax=660;
+        be.rows=[{fc:9600,from:0,to:300},{fc:15000,from:301,to:600},{fc:20000,from:601,to:900}];
+        document.getElementById('be_price').value=be.price;
+        document.getElementById('be_vc').value=be.vc;
+        document.getElementById('be_sp').value=be.sp;
+        document.getElementById('be_qmin').value=be.qmin;
+        document.getElementById('be_qmax').value=be.qmax;
+        beRender();
+      };
+      ['be_price','be_vc','be_sp','be_qmin','be_qmax'].forEach(id=>{
+        document.getElementById(id).oninput=beRender;
+      });
+    }
+
+    const mt = {
+      p: 0.35,
+      acts: [
+        { name:'Відновити оренду', vals:[500000,500000] },
+        { name:'Будувати',         vals:[5000000,4000000] },
+        { name:'Переїхати',        vals:[100000,100000] }
+      ]
+    };
+
+    function mtRender(){
+      mt.p = Number(document.getElementById('mt_p').value||0);
+      const tb = document.getElementById('mt_tbody');
+      tb.innerHTML = '';
+
+      const maxima = [];
+      const minima = [];
+      const avgs   = [];
+      const evs    = [];
+      const regMax = [];
+
+      const colMax0 = Math.max.apply(null, mt.acts.map(a=>a.vals[0]));
+      const colMax1 = Math.max.apply(null, mt.acts.map(a=>a.vals[1]));
+
+      for(let i=0;i<mt.acts.length;i++){
+        const a = mt.acts[i];
+        const tr = el('tr');
+
+        const tdName = el('td');
+        const inName = el('input', { value:a.name });
+        inName.oninput = () => { a.name = inName.value; mtRender(); };
+        tdName.appendChild(inName);
+
+        const tdV0 = el('td');
+        const inV0 = el('input', { type:'number', value:String(a.vals[0]) });
+        inV0.oninput = () => { a.vals[0] = Number(inV0.value||0); mtRender(); };
+        tdV0.appendChild(inV0);
+
+        const tdV1 = el('td');
+        const inV1 = el('input', { type:'number', value:String(a.vals[1]) });
+        inV1.oninput = () => { a.vals[1] = Number(inV1.value||0); mtRender(); };
+        tdV1.appendChild(inV1);
+
+        const mx  = Math.max(a.vals[0], a.vals[1]);
+        const mn  = Math.min(a.vals[0], a.vals[1]);
+        const avg = (a.vals[0] + a.vals[1]) / 2;
+        const ev  = a.vals[0]*mt.p + a.vals[1]*(1-mt.p);
+        const rg0 = colMax0 - a.vals[0];
+        const rg1 = colMax1 - a.vals[1];
+        const rgM = Math.max(rg0, rg1);
+
+        maxima.push(mx);
+        minima.push(mn);
+        avgs.push(avg);
+        evs.push(ev);
+        regMax.push(rgM);
+
+        const tdMx = el('td', { text:String(Math.round(mx)) });
+        const tdMn = el('td', { text:String(Math.round(mn)) });
+        const tdAv = el('td', { text:String(Math.round(avg)) });
+        const tdEv = el('td', { text:String(Math.round(ev)) });
+
+        const tdDel = el('td');
+        const btn   = el('button', { text:'✕' });
+        btn.onclick = () => { mt.acts.splice(i,1); mtRender(); };
+        tdDel.appendChild(btn);
+
+        tr.appendChild(tdName);
+        tr.appendChild(tdV0);
+        tr.appendChild(tdV1);
+        tr.appendChild(tdMx);
+        tr.appendChild(tdMn);
+        tr.appendChild(tdAv);
+        tr.appendChild(tdEv);
+        tr.appendChild(tdDel);
+        tb.appendChild(tr);
+      }
+
+      function argmax(a){ return a.indexOf(Math.max.apply(null,a)); }
+      function argmin(a){ return a.indexOf(Math.min.apply(null,a)); }
+
+      const cMx = argmax(maxima);
+      const cMn = argmax(minima);
+      const cLa = argmax(avgs);
+      const cRg = argmin(regMax);
+      const cEv = argmax(evs);
+
+      const out = document.getElementById('mt_out');
+      out.innerHTML = '';
+
+      const items = [
+        ['Maximax', cMx],
+        ['Maximin', cMn],
+        ['Laplace', cLa],
+        ['Minimax regret', cRg],
+        ['Очікуване значення (p = ' + mt.p + ')', cEv]
+      ];
+
+      for(const it of items){
+        const li = el('li', { text: it[0] + ': ' + (mt.acts[it[1]] ? mt.acts[it[1]].name : '') });
+        out.appendChild(li);
+      }
+    }
+
+    function mtBind(){
+      document.getElementById('mt_add').onclick = function(){
+        mt.acts.push({ name:'Нова дія', vals:[0,0] });
+        mtRender();
+      };
+      document.getElementById('mt_fill').onclick = function(){
+        document.getElementById('s0').value = 'Дозволено';
+        document.getElementById('s1').value = 'Заборонено';
+        document.getElementById('mt_p').value = '0.35';
+        mt.acts = [
+          { name:'Відновити оренду', vals:[500000,500000] },
+          { name:'Будувати',         vals:[5000000,4000000] },
+          { name:'Переїхати',        vals:[100000,100000] }
+        ];
+        mtRender();
+      };
+      document.getElementById('mt_p').oninput = mtRender;
+      document.getElementById('s0').oninput = mtRender;
+      document.getElementById('s1').oninput = mtRender;
+    }
+
+    beBind();
+    mtBind();
+    beRender();
+    mtRender();
+  </script>
+</body>
+</html>
